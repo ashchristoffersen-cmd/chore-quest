@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { PinGate } from '../components/PinGate';
+import { DEFAULT_PIN, PinGate } from '../components/PinGate';
 import { ALL_DAYS, WEEKDAY_LABELS, WEEKEND_DAYS, formatDay, toISODate } from '../lib/date';
 import { formatMoney, parseMoney } from '../lib/money';
 import { AVATAR_CHOICES, CHORE_EMOJI_CHOICES } from '../lib/defaults';
@@ -402,7 +402,11 @@ export function ParentView() {
               inputMode="numeric"
               value={state.settings.pin}
               onChange={(e) => updateSettings({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+              onBlur={() => {
+                if (state.settings.pin.length < 4) updateSettings({ pin: DEFAULT_PIN });
+              }}
             />
+            <span className="muted">4 digits — reverts to {DEFAULT_PIN} if left blank</span>
           </label>
 
           <h3 className="section-title">Vault interest (optional)</h3>

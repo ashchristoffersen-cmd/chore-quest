@@ -46,7 +46,10 @@ export function VaultView() {
 
   if (!kid) return <div className="view">No kids configured yet.</div>;
 
-  const goalPct = kid.goal ? Math.min(100, Math.round((balance / kid.goal.targetCents) * 100)) : 0;
+  const goalPct =
+    kid.goal && kid.goal.targetCents > 0
+      ? Math.min(100, Math.max(0, Math.round((balance / kid.goal.targetCents) * 100)))
+      : 0;
 
   const submit = () => {
     if (!pending) return;

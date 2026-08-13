@@ -7,7 +7,10 @@ interface Props {
   pin: string;
 }
 
-export function PinGate({ title, onSuccess, onCancel, pin }: Props) {
+export const DEFAULT_PIN = '1234';
+
+export function PinGate({ title, onSuccess, onCancel, pin: rawPin }: Props) {
+  const pin = rawPin.length > 0 ? rawPin : DEFAULT_PIN;
   const [entry, setEntry] = useState('');
   const [error, setError] = useState(false);
 

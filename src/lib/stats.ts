@@ -114,22 +114,28 @@ export function bonusChoresDone(state: AppState, kidId: KidId): number {
   return Object.values(state.completions).filter((c) => c.kidId === kidId && c.kind === 'bonus').length;
 }
 
-export function isPerfectWeek(state: AppState, kidId: KidId, date: string): boolean {
-  const dates = weekDates(date).filter((d) => d <= date);
-  if (dates.length < 7) return false;
-  return dates.every((d) => {
+/**
+ * True when every chore day in the period was completed. Evaluated over the whole
+ * period rather than up to `date`, so the answer is stable for any date inside it
+ * and derived payouts are not clawed back when an earlier day is reconciled again.
+ */
+function isPerfectPeriod(state: AppState, kidId: KidId, dates: string[]): boolean {
+  let active = 0;
+  for (const d of dates) {
     const s = daySummary(state, kidId, d);
-    return s.dailyTotal === 0 || s.allDailyDone;
-  });
+    if (s.dailyTotal === 0) continue;
+    if (!s.allDailyDone) return false;
+    active += 1;
+  }
+  return active > 0;
+}
+
+export function isPerfectWeek(state: AppState, kidId: KidId, date: string): boolean {
+  return isPerfectPeriod(state, kidId, weekDates(date));
 }
 
 export function isPerfectMonth(state: AppState, kidId: KidId, date: string): boolean {
-  const dates = monthDates(date);
-  if (dates[dates.length - 1] !== date) return false;
-  return dates.every((d) => {
-    const s = daySummary(state, kidId, d);
-    return s.dailyTotal === 0 || s.allDailyDone;
-  });
+  return isPerfectPeriod(state, kidId, monthDates(date));
 }
 
 export function isTeamDay(state: AppState, date: string): boolean {

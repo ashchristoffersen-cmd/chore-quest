@@ -23,6 +23,7 @@ function Shell() {
   const [events, setEvents] = useState<CelebrationEvent[]>([]);
 
   const celebrate = useCallback((next: CelebrationEvent[]) => setEvents(next), []);
+  const clearEvents = useCallback(() => setEvents([]), []);
 
   return (
     <CelebrateContext.Provider value={celebrate}>
@@ -45,7 +46,7 @@ function Shell() {
           events={events}
           soundEnabled={state.settings.soundEnabled}
           currencySymbol={state.settings.currencySymbol}
-          onDone={() => setEvents([])}
+          onDone={clearEvents}
         />
       )}
     </CelebrateContext.Provider>
