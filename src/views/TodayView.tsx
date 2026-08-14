@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { useCelebrate } from '../celebrationContext';
 import { tickChore, untickChore } from '../lib/engine';
 import { choresForDay, daySummary, isDone, streakLength } from '../lib/stats';
-import { formatDay, isWeekend } from '../lib/date';
+import { choreDate, formatDay, isWeekend } from '../lib/date';
 import { formatMoney } from '../lib/money';
 import type { DayChore } from '../lib/stats';
 import type { Kid } from '../types';
@@ -59,6 +59,8 @@ export function TodayView({ kidFilter }: { kidFilter: string | null }) {
 
   const kids = selected ? state.kids.filter((k) => k.id === selected) : state.kids;
   const symbol = state.settings.currencySymbol;
+  // Ignores the parent's date override so an overridden day is named, not called "Today".
+  const realToday = choreDate(state.settings.dayResetHour, null);
 
   const toggle = (kidId: string, chore: DayChore, done: boolean) => {
     if (done) {
@@ -78,7 +80,7 @@ export function TodayView({ kidFilter }: { kidFilter: string | null }) {
     <div className="view">
       <header className="view-header">
         <div>
-          <h1>{formatDay(today, today)}</h1>
+          <h1>{formatDay(today, realToday)}</h1>
           <p className="muted">{isWeekend(today) ? '🎉 Bonus Blitz weekend!' : 'Chore time'}</p>
         </div>
         <div className="kid-switch">

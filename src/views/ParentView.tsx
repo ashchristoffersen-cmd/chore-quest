@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { DEFAULT_PIN, PinGate } from '../components/PinGate';
+import { MoneyInput } from '../components/MoneyInput';
 import { ALL_DAYS, WEEKDAY_LABELS, WEEKEND_DAYS, formatDay, toISODate } from '../lib/date';
-import { formatMoney, parseMoney } from '../lib/money';
+import { formatMoney } from '../lib/money';
 import { AVATAR_CHOICES, CHORE_EMOJI_CHOICES } from '../lib/defaults';
 import { reconcile } from '../lib/engine';
-import type { Chore, ChoreKind, Kid } from '../types';
+import type { AppState, Chore, ChoreKind, Kid } from '../types';
 
 function EmojiPicker({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   return (
@@ -52,11 +53,7 @@ function ChoreEditor({
           </label>
           <label>
             Amount
-            <input
-              inputMode="decimal"
-              value={(chore.amountCents / 100).toFixed(2)}
-              onChange={(e) => onChange({ ...chore, amountCents: parseMoney(e.target.value) })}
-            />
+            <MoneyInput cents={chore.amountCents} onChange={(amountCents) => onChange({ ...chore, amountCents })} />
           </label>
           <label>Icon</label>
           <EmojiPicker
@@ -129,16 +126,15 @@ function KidEditor({ kid, symbol, onChange }: { kid: Kid; symbol: string; onChan
       </label>
       <label>
         Goal amount ({symbol})
-        <input
-          inputMode="decimal"
-          value={((kid.goal?.targetCents ?? 0) / 100).toFixed(2)}
-          onChange={(e) =>
+        <MoneyInput
+          cents={kid.goal?.targetCents ?? 0}
+          onChange={(targetCents) =>
             onChange({
               ...kid,
               goal: {
                 emoji: kid.goal?.emoji ?? '🎯',
                 label: kid.goal?.label ?? 'Goal',
-                targetCents: parseMoney(e.target.value),
+                targetCents,
               },
             })
           }
@@ -181,8 +177,13 @@ export function ParentView() {
     );
   }
 
+  // Chore and bonus edits change what "all chores done" means, so derived payouts
+  // and trophies have to be recomputed for the active day.
+  const editAndReconcile = (updater: (prev: AppState) => AppState) =>
+    setState((prev) => reconcile(updater(prev), today).state);
+
   const updateSettings = (patch: Partial<typeof state.settings>) =>
-    setState((prev) => ({ ...prev, settings: { ...prev.settings, ...patch } }));
+    editAndReconcile((prev) => ({ ...prev, settings: { ...prev.settings, ...patch } }));
 
   const chores = state.chores.filter((c) => c.kidId === activeKid && !c.archived);
 
@@ -219,10 +220,10 @@ export function ParentView() {
               chore={chore}
               symbol={symbol}
               onChange={(next) =>
-                setState((prev) => ({ ...prev, chores: prev.chores.map((c) => (c.id === next.id ? next : c)) }))
+                editAndReconcile((prev) => ({ ...prev, chores: prev.chores.map((c) => (c.id === next.id ? next : c)) }))
               }
               onDelete={() =>
-                setState((prev) => ({
+                editAndReconcile((prev) => ({
                   ...prev,
                   chores: prev.chores.map((c) => (c.id === chore.id ? { ...c, archived: true } : c)),
                 }))
@@ -234,7 +235,7 @@ export function ParentView() {
             <button
               type="button"
               onClick={() =>
-                setState((prev) => ({
+                editAndReconcile((prev) => ({
                   ...prev,
                   chores: [
                     ...prev.chores,
@@ -259,7 +260,7 @@ export function ParentView() {
               type="button"
               className="ghost"
               onClick={() =>
-                setState((prev) => ({
+                editAndReconcile((prev) => ({
                   ...prev,
                   chores: [
                     ...prev.chores,
@@ -297,7 +298,9 @@ export function ParentView() {
                   <button
                     type="button"
                     className="ghost small-btn"
-                    onClick={() => setState((prev) => ({ ...prev, oneOffs: prev.oneOffs.filter((x) => x.id !== o.id) }))}
+                    onClick={() =>
+                      editAndReconcile((prev) => ({ ...prev, oneOffs: prev.oneOffs.filter((x) => x.id !== o.id) }))
+                    }
                   >
                     Remove
                   </button>
@@ -308,7 +311,7 @@ export function ParentView() {
             type="button"
             className="ghost"
             onClick={() =>
-              setState((prev) => ({
+              editAndReconcile((prev) => ({
                 ...prev,
                 oneOffs: [
                   ...prev.oneOffs,
@@ -353,26 +356,23 @@ export function ParentView() {
         <section className="card">
           <label>
             All-chores-done bonus ({symbol})
-            <input
-              inputMode="decimal"
-              value={(state.settings.perfectDayBonusCents / 100).toFixed(2)}
-              onChange={(e) => updateSettings({ perfectDayBonusCents: parseMoney(e.target.value) })}
+            <MoneyInput
+              cents={state.settings.perfectDayBonusCents}
+              onChange={(perfectDayBonusCents) => updateSettings({ perfectDayBonusCents })}
             />
           </label>
           <label>
             Perfect week bonus ({symbol})
-            <input
-              inputMode="decimal"
-              value={(state.settings.perfectWeekBonusCents / 100).toFixed(2)}
-              onChange={(e) => updateSettings({ perfectWeekBonusCents: parseMoney(e.target.value) })}
+            <MoneyInput
+              cents={state.settings.perfectWeekBonusCents}
+              onChange={(perfectWeekBonusCents) => updateSettings({ perfectWeekBonusCents })}
             />
           </label>
           <label>
             Teamwork bonus, each kid ({symbol})
-            <input
-              inputMode="decimal"
-              value={(state.settings.teamBonusCents / 100).toFixed(2)}
-              onChange={(e) => updateSettings({ teamBonusCents: parseMoney(e.target.value) })}
+            <MoneyInput
+              cents={state.settings.teamBonusCents}
+              onChange={(teamBonusCents) => updateSettings({ teamBonusCents })}
             />
           </label>
           <label>
